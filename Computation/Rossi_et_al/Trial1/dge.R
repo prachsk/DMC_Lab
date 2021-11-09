@@ -1,3 +1,6 @@
+# This script was written based on R script in the method section of Rossi et al., 2019.
+# The original code for the paper can be found on https://github.com/stuberlab
+
 library(Seurat)
 library(dplyr)
 library(Matrix)
