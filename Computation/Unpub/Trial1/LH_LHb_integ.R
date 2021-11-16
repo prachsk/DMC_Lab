@@ -3,7 +3,7 @@ library(Seurat)
 library(patchwork)
 library(readxl)
 
-#Read data from .txt and cleanup
+# Read data from .txt and cleanup
 LHb_lskra.data <- read.table('/Users/pax/Google\ Drive/My\ Drive/Meletis/Unpub_RNA-seq/LHb_Projection_data/LHb_Iskra.txt', header = TRUE)
 LHb_lskra.genes <- LHb_lskra.data$GeneID
 LHb_lskra.data['GeneID'] <- NULL
@@ -14,33 +14,35 @@ LH_lskra.genes <- rownames(LH_lskra.data)
 row.names(LH_lskra.data) <- NULL
 LH_lskra.se <- CreateSeuratObject(LH_lskra.data, project = 'LH_lskra', row.names = LH_lskra.genes)
 
-#Subset LHb_lskra.se
-VlnPlot(LHb_lskra.se, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
+# mt qc and Subset LHb_lskra.se
+LHb_lskra.se[["percent.mt"]] <- PercentageFeatureSet(LHb_lskra.se, pattern = "^Mt.")
+VlnPlot(LHb_lskra.se, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 plot1 <- FeatureScatter(LHb_lskra.se, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = 'orig.ident')
 plot1
-LHb_lskra.se <- subset(LHb_lskra.se, subset = nFeature_RNA > 1250)
+LHb_lskra.se <- subset(LHb_lskra.se, subset = nFeature_RNA > 1250 & nFeature_RNA < 1.0)
 
-#Subset LH_lskra.se
-VlnPlot(LH_lskra.se, features = c("nFeature_RNA", "nCount_RNA"), ncol = 2)
+# Subset LH_lskra.se
+LH_lskra.se[["percent.mt"]] <- PercentageFeatureSet(LH_lskra.se, pattern = "^Mt.")
+VlnPlot(LH_lskra.se, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 plot1 <- FeatureScatter(LH_lskra.se, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = 'orig.ident')
 plot1
-LH_lskra.se <- subset(LH_lskra.se, subset = nFeature_RNA > 2500)
+LH_lskra.se <- subset(LH_lskra.se, subset = nFeature_RNA > 2500 & nFeature_RNA < 0.5)
 
 # Create list of the 2 se objs
 LH_LHb.list <- list(LH_lskra.se, LH_lskra.se)
 
-#Normalize and identify variable features for each dataset independently
+# Normalize and identify variable features for each dataset independently
 LH_LHb.list <- lapply(X = LH_LHb.list, FUN = function(x) {
   x <- NormalizeData(x)
   x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
 })
 
-#Select features that are repeatedly variable across datasets for integration
+# Select features that are repeatedly variable across datasets for integration
 features <- SelectIntegrationFeatures(object.list = LH_LHb.list)
 
 LH_LHb.anchors <- FindIntegrationAnchors(object.list = LH_LHb.list, anchor.features = features)
 
-#Creates an 'integrated' data assay
+# Creates an 'integrated' data assay
 LH_LHb.combined <- IntegrateData(anchorset = LH_LHb.anchors)
 
 # specify that we will perform downstream analysis on the corrected data note that the
@@ -48,9 +50,9 @@ DefaultAssay(LH_LHb.combined) <- "integrated"
 
 # Run the standard workflow for visualization and clustering
 LH_LHb.combined <- ScaleData(LH_LHb.combined, verbose = FALSE)
-LH_LHb.combined <- RunPCA(LH_LHb.combined, npcs = 30, verbose = FALSE)
-LH_LHb.combined <- RunUMAP(LH_LHb.combined, reduction = "pca", dims = 1:30)
-LH_LHb.combined <- FindNeighbors(LH_LHb.combined, reduction = "pca", dims = 1:30)
+LH_LHb.combined <- RunPCA(LH_LHb.combined, npcs = 120, verbose = FALSE)
+LH_LHb.combined <- RunUMAP(LH_LHb.combined, reduction = "pca", dims = 1:60)
+LH_LHb.combined <- FindNeighbors(LH_LHb.combined, reduction = "pca", dims = 1:60)
 LH_LHb.combined <- FindClusters(LH_LHb.combined, resolution = 0.5)
 
 # Visualization
@@ -59,7 +61,7 @@ p2 <- DimPlot(LH_LHb.combined, reduction = "umap", label = TRUE, repel = TRUE)
 p1 + p2
 DimPlot(LH_LHb.combined, reduction = "umap", split.by = "orig.ident")
 
-#Performing differential expression after integration, switch back to the original data
+# Performing differential expression after integration, switch back to the original data
 DefaultAssay(LH_LHb.combined) <- "RNA"
 c1.markers <- FindConservedMarkers(LH_LHb.combined, ident.1 = 1, grouping.var = "orig.ident", verbose = FALSE)
 head(c1.markers)

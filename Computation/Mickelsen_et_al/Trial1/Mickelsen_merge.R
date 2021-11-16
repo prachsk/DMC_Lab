@@ -10,13 +10,16 @@ AJ17002.data <- Read10X(data.dir = "~/Google\ Drive/My\ Drive/Meletis/Data_repro
 AJ17001.se <- CreateSeuratObject(AJ17001.data, project = "Female", min.cells = 5, min.features = 200)
 AJ17002.se <- CreateSeuratObject(AJ17002.data, project = "Male", min.cells = 5, min.features = 200)
 
-#Add sex to the  obj
+#Add sex to the  obj metadata
 AJ17001.se[['sex']] <- "F"
 AJ17002.se[['sex']] <- "M"
 
 #Merge Seurat obj
 LHA.combined <- merge(AJ17001.se, y = AJ17002.se, add.cell.ids = c("F", "M"), project = "LHA_combined")
 LHA.combined
+
+# Add source to metadata
+LHA.combined[["source"]] <- rep(c("Mickelsen"), times = ncol(LHA.combined))
 
 #Look for mitochodrial genes in the count matrix
 LHA.combined[["percent.mt"]] <- PercentageFeatureSet(LHA.combined, pattern = "^mt-")
@@ -96,6 +99,6 @@ LHA.combined$cell_type[which(names(LHA.combined$nCount_RNA) %in% neuron.list)] <
 DimPlot(LHA.combined, reduction = "tsne", group.by = "cell_type")
 
 #Save the LHA.combined obj
-saveRDS(LHA.combined, file = "./Mickelsen_merge.rds")
+saveRDS(LHA.combined, file = "../RDS_obj/Mickelsen_merge.RDS")
 
 

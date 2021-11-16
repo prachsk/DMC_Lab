@@ -41,10 +41,12 @@ LHA_LHb_patch.se <- AddMetaData(LHA_LHb_patch.se, LHA_LHb_patch.lib, col.name = 
 row.names(LHA_LHb_patch.ephys) <- rownames(LHA_LHb_patch.se[[]])
 LHA_LHb_patch.se <- AddMetaData(LHA_LHb_patch.se, LHA_LHb_patch.ephys, col.name = "Ephys_Cathegory")
 
+# Add data source to metadata
+LHA_LHb_patch.se[["source"]] <- rep(c("Unpub"), times = ncol(LHA_LHb_patch.se))
+
 # Transform the transcript count into TPM
 #LHA_LHb_patch.se$nCount_RNA <- (LHA_LHb_patch.se$nCount_RNA)/1e6
 
-# This step can be skipped as there are no mt genes in the data
 # Find percent of mt genes
 LHA_LHb_patch.se[["percent.mt"]] <- PercentageFeatureSet(LHA_LHb_patch.se, pattern = "^mt.")
 
