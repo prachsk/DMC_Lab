@@ -32,7 +32,7 @@ proj.merge <- RunPCA(proj.merge, npcs = 200, features = VariableFeatures(object 
 
 # Run harmony
 proj.harmony <- proj.merge %>% 
-  RunHarmony("source", plot_convergence = TRUE)
+  RunHarmony("neuron_type", plot_convergence = TRUE)
 
 # Downstream analysis of harmony
 proj.harmony <- proj.harmony %>% 
@@ -41,7 +41,7 @@ proj.harmony <- proj.harmony %>%
   FindClusters(resolution = 0.5) %>% 
   identity()
 
-DimPlot(proj.harmony, reduction = "umap")
+DimPlot(proj.harmony, reduction = "umap", group.by = "source")
 
 # Find cluster markers
 proj.markers <- FindAllMarkers(proj.harmony, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
@@ -49,12 +49,17 @@ proj.markers %>%
   group_by(cluster) %>%
   slice_max(n = 2, order_by = avg_log2FC)
 
+# Save RDS of proj.markers and proj.harmoony
 saveRDS(proj.markers, "./RDS_obj/Harmony_markers.RDS")
 saveRDS(proj.harmony, "./RDS_obj/Harmony_pub_unpub.RDS")
 
+# Read RDS
+#proj.markers <- readRDS("./RDS_obj/Harmony_markers_neurons.RDS")
+proj.harmony <- readRDS("./RDS_obj/Harmony_pub_unpub.RDS")
+
 # Add Cell type metadata
-#Find the median of neuron markers
-#neuron.markers <- AverageExpression(proj.merge, features = c("Snap25", "Syp", "Tubb3", "Elavl2"))
+# Find the median of neuron markers
+#neuron.markers <- AverageExpression(proj.harmony, features = c("Snap25", "Syp", "Tubb3", "Elavl2"))
 
 #Create a list of cell names that are neurons
 #neuron.list <- WhichCells(proj.merge, idents = c(0,1,3,4,5,7,9,13,15))

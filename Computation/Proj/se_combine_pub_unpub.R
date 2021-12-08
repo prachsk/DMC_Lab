@@ -4,6 +4,7 @@ library(ggplot2)
 library(scales)
 library(Seurat)
 library(SeuratObject)
+library(dittoSeq)
 
 # Read RDS of pub and unpub data
 chen <- readRDS('/Users/pax/Google\ Drive/My\ Drive/Meletis/Computation/Chen_et_al/RDS_obj/Chen_merge.RDS')
@@ -65,6 +66,19 @@ saveRDS("./RDS_obj/Proj_combined_FindAll.RDS")
 proj.combined.markers <- readRDS("./RDS_obj/Proj_combined_markers.RDS")
 proj.combined <- readRDS("./RDS_obj/Proj_combined_FindAll.RDS")
 
+# Assign new Sources
+proj.combined[["Source"]] <- proj.combined$source
+unpub.LHA <- rownames(proj.combined@meta.data)[proj.combined$orig.ident == "LHA" & proj.combined$source == "Unpub"]
+unpub.patch <- rownames(proj.combined@meta.data)[proj.combined$orig.ident == "LHA_LHb_patch" & proj.combined$source == "Unpub"]
+unpub.LHb <- rownames(proj.combined@meta.data)[proj.combined$orig.ident == "LHb_lskra" & proj.combined$source == "Unpub"]
+unpub.HSV <- rownames(proj.combined@meta.data)[proj.combined$orig.ident == "HSV" & proj.combined$source == "Unpub"]
+
+# Classify cell according to the unpub areas
+proj.combined$Source[which(names(proj.combined$nCount_RNA) %in% unpub.LHA)] <- "Unpub_LHA"
+proj.combined$Source[which(names(proj.combined$nCount_RNA) %in% unpub.patch)] <- "Unpub_LHA_LHb_patch"
+proj.combined$Source[which(names(proj.combined$nCount_RNA) %in% unpub.LHb)] <- "Unpub_LHb"
+proj.combined$Source[which(names(proj.combined$nCount_RNA) %in% unpub.HSV)] <- "Unpub_HSV"
+
 # Get top 2 makers of each cluster
 top2.markers <- proj.combined.markers %>%
   group_by(cluster) %>%
@@ -91,6 +105,9 @@ proj.combined$cell_type[which(names(proj.combined$nCount_RNA) %in% non_neuron.li
 
 # Visualize UMAP with DimPlot
 DimPlot(proj.combined, reduction = "umap", group.by = "cell_type") + DimPlot(proj.combined, reduction = "umap", label = TRUE) + DimPlot(proj.combined, reduction = "umap", group.by = "source")
+
+# FeaturePlot of "Pdgfra" & "C1ql1"
+FeaturePlot(proj.combined, features = c("Pdgfra", "C1ql1"))
 
 # Suspect that cells with "None" in cell_type are immune cell
 # Use VlnPlot to visualize key markers of cluster 5 (almost all "None" cells are in cluster 5)
@@ -182,7 +199,7 @@ neuron.subset$neuron_type[which(names(neuron.subset$nCount_RNA) %in% GABA.list)]
 # Classify cell with names in GLUT.list to be GLUT
 neuron.subset$neuron_type[which(names(neuron.subset$nCount_RNA) %in% GLUT.list)] <- "GLUT"
 
-DimPlot(neuron.subset, reduction = "umap", group.by = "neuron_type") + DimPlot(neuron.subset, reduction = "umap", label = T) + DimPlot(neuron.subset, reduction = "umap", group.by = "orig.ident")
+DimPlot(neuron.subset, reduction = "umap", group.by = "neuron_type") + DimPlot(neuron.subset, reduction = "umap", label = T) + DimPlot(neuron.subset, reduction = "umap", group.by = "Source")
 
 # Save RDS of neuron.subset
 saveRDS(neuron.subset, "./RDS_obj/Proj_combined_neuron_sub.RDS")
@@ -230,6 +247,19 @@ neuron.subset <- RenameIdents(object = neuron.subset,
                               "28" = "GLUT16",
                               "31" = "GLUT17",
                               "34" = "GLUT18")
+
+neuron.subset[["subtypes"]] <- Idents(neuron.subset)
+
+# UMAP plots of cell from different sources in neuron.subset
+p1 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Unpub_LHA"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHA") + NoLegend()
+p2 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Unpub_LHb"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHb") + NoLegend()
+p3 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Unpub_HSV"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_HSV") + NoLegend()
+p4 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Unpub_LHA_LHb_patch"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHA_LHb_patch") + NoLegend()
+p5 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Chen"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Chen") + NoLegend()
+p6 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Mickelsen"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Mickelsen") + NoLegend()
+p7 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Rossi_2019"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Rossi_2019") + NoLegend()
+p8 <- DimPlot(neuron.subset, cells.highlight = rownames(neuron.subset@meta.data)[neuron.subset$Source == "Rossi_2021"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Rossi_2021") + NoLegend()
+p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + (DimPlot(neuron.subset, reduction = "umap", label = T) + NoLegend())
 
 # Select RNA as default assay for neuron.subset to find markers in each cluster
 DefaultAssay(neuron.subset) <- "RNA"
@@ -302,28 +332,49 @@ GLUT.sub.top2.markers <- GLUT.sub.markers %>%
 GLUT.sub[["old.ident"]] <- Idents(GLUT.sub)
 
 GLUT.sub <- RenameIdents(GLUT.sub, 
-                         "0" = "Tac1 + Trh",
-                         "1" = "Nts + Tcf7l2",
-                         "2" = "Tac1 + Pitx2",
-                         "3" = "Hcrt + Scg2",
-                         "4" = "Penk + Otp",
-                         "5" = "Meis2 + Rsrp1",
-                         "6" = "Dlk1 + Asb4",
-                         "7" = "Bc1 + Pax6",
-                         "8" = "Pmch + Cartpt",
-                         "9" = "Synpr + Hpcal1",
-                         "10" = "Foxb1 + Pitx2",
-                         "11" = "Apoe + Atp1a2",
-                         "12" = "Trh + Ghrh",
-                         "13" = "Tcf4 + Calca",
-                         "14" = "Nppc + Nrn1",
-                         "15" = "Tcf4 + Grp",
-                         "16" = "Avp + Oxt",
-                         "17" = "Ucn3 + Trh"
+                         "0" = "GLUT1",
+                         "1" = "GLUT2",
+                         "2" = "GLUT3",
+                         "3" = "GLUT4",
+                         "4" = "GLUT5",
+                         "5" = "GLUT6",
+                         "6" = "GLUT7",
+                         "7" = "GLUT8",
+                         "8" = "GLUT9",
+                         "9" = "GLUT10",
+                         "10" = "GLUT11",
+                         "11" = "GLUT12",
+                         "12" = "GLUT13",
+                         "13" = "GLUT14",
+                         "14" = "GLUT15",
+                         "15" = "GLUT16",
+                         "16" = "GLUT17",
+                         "17" = "GLUT18"
                          )
 
 # Save current active ident as subtypes
 GLUT.sub[["subtypes"]] <- Idents(GLUT.sub)
+
+GLUT.sub <- RenameIdents(GLUT.sub, 
+                         "GLUT1" = "Tac1 + Trh",
+                         "GLUT2" = "Nts + Tcf7l2",
+                         "GLUT3" = "Tac1 + Pitx2",
+                         "GLUT4" = "Hcrt + Scg2",
+                         "GLUT5" = "Penk + Otp",
+                         "GLUT6" = "Meis2 + Rsrp1",
+                         "GLUT7" = "Dlk1 + Asb4",
+                         "GLUT8" = "Bc1 + Pax6",
+                         "GLUT9" = "Pmch + Cartpt",
+                         "GLUT10" = "Synpr + Hpcal1",
+                         "GLUT11" = "Foxb1 + Pitx2",
+                         "GLUT12" = "Apoe + Atp1a2",
+                         "GLUT13" = "Trh + Ghrh",
+                         "GLUT14" = "Tcf4 + Calca",
+                         "GLUT15" = "Nppc + Nrn1",
+                         "GLUT16" = "Tcf4 + Grp",
+                         "GLUT17" = "Avp + Oxt",
+                         "GLUT18" = "Ucn3 + Trh"
+                         )
 
 # Save RDS GLUT.sub
 saveRDS(GLUT.sub, "./RDS_obj/GLUT_sub_named.RDS")
@@ -333,11 +384,26 @@ GLUT.sub <- readRDS("./RDS_obj/GLUT_sub_named.RDS")
 
 # DimPlot of GLUT subtypes embedded in UMAP
 DimPlot(GLUT.sub, reduction = 'umap', label = T) + labs(title = "UMAP of GLUT Subtypes") + NoLegend()
+DimPlot(GLUT.sub, reduction = 'umap', group.by = "subtypes" , label = T) + labs(title = "UMAP of GLUT Subtype Numbers") + NoLegend()
+
+# DimPlot of GLUT subtypes embedded in UMAP group by source
+DimPlot(GLUT.sub, reduction = 'umap', group.by = "Source") + labs(title = "UMAP of GLUT Subtypes")
 
 # # Visualize markers of GLUT clusters with stack VlnPlot
 VlnPlot(GLUT.sub , features = c(unique(GLUT.sub.top2.markers$gene)), 
         stack = T, group.by = "old.ident", split.by = "subtypes", flip = T) + 
   NoLegend() + labs(title = "Markers of GLUT clusters")
+
+# UMAP plots of cell from different sources in GLUT.se
+p1 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Unpub_LHA"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHA in GLUT") + NoLegend()
+p2 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Unpub_LHb"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHb in GLUT") + NoLegend()
+p3 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Unpub_HSV"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_HSV in GLUT") + NoLegend()
+p4 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Unpub_LHA_LHb_patch"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHA_LHb_patch in GLUT") + NoLegend()
+p5 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Chen"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Chen in GLUT") + NoLegend()
+p6 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Mickelsen"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Mickelsen in GLUT") + NoLegend()
+p7 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Rossi_2019"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Rossi_2019 in GLUT") + NoLegend()
+p8 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Source == "Rossi_2021"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Rossi_2021 in GLUT") + NoLegend()
+p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + (DimPlot(GLUT.sub, reduction = "umap", group.by = "subtypes", label = T) + NoLegend())
 
 # Subset GABA cells and run Seurat workflow
 GABA.sub <- subset(neuron.subset, subset = neuron_type == "GABA")
@@ -384,30 +450,53 @@ GABA.sub.top2.markers <- GABA.sub.markers %>%
 GABA.sub[["old.ident"]] <- Idents(GABA.sub)
 
 GABA.sub <- RenameIdents(GABA.sub,
-                         "0" = "Tac2 + A030009H04Rik",
-                         "1" = "Nts + Cartpt",
-                         "2" = "Tac1 + Meis2",
-                         "3" = "Ddc + Sncg",
-                         "4" = "Gal + Lmo3",
-                         "5" = "Sst + Meis2",
-                         "6" = "Tcf4 + Synpr",
-                         "7" = "Gm42418 + 2900097C17Rik",
-                         "8" = "Nnat + C1ql2",
-                         "9" = "Tcf7l2 + Calb1",
-                         "10" = "Ebf1 + Nkx2-4",
-                         "11" = "Plp1 + Ptgds",
-                         "12" = "Sst + Arpp21",
-                         "13" = "Fam81a + Rprm",
-                         "14" = "Pmch + Olig1",
-                         "15" = "Cck + Vtn",
-                         "16" = "Cst3 + C1qa",
-                         "17" = "Slc5a7 + Acly",
-                         "18" = "Calb2 + Synpr",
-                         "19" = "Hdc + Slc18a2"
+                         "0" = "GABA1",
+                         "1" = "GABA2",
+                         "2" = "GABA3",
+                         "3" = "GABA4",
+                         "4" = "GABA5",
+                         "5" = "GABA6",
+                         "6" = "GABA7",
+                         "7" = "GABA8",
+                         "8" = "GABA9",
+                         "9" = "GABA10",
+                         "10" = "GABA11",
+                         "11" = "GABA12",
+                         "12" = "GABA13",
+                         "13" = "GABA14",
+                         "14" = "GABA15",
+                         "15" = "GABA16",
+                         "16" = "GABA17",
+                         "17" = "GABA18",
+                         "18" = "GABA19",
+                         "19" = "GABA20"
                          )
 
 # Save current active ident as subtypes
 GABA.sub[["subtypes"]] <- Idents(GABA.sub)
+
+GABA.sub <- RenameIdents(GABA.sub,
+                         "GABA1" = "Tac2 + A030009H04Rik",
+                         "GABA2" = "Nts + Cartpt",
+                         "GABA3" = "Tac1 + Meis2",
+                         "GABA4" = "Ddc + Sncg",
+                         "GABA5" = "Gal + Lmo3",
+                         "GABA6" = "Sst + Meis2",
+                         "GABA7" = "Tcf4 + Synpr",
+                         "GABA8" = "Gm42418 + 2900097C17Rik",
+                         "GABA9" = "Nnat + C1ql2",
+                         "GABA10" = "Tcf7l2 + Calb1",
+                         "GABA11" = "Ebf1 + Nkx2-4",
+                         "GABA12" = "Plp1 + Ptgds",
+                         "GABA13" = "Sst + Arpp21",
+                         "GABA14" = "Fam81a + Rprm",
+                         "GABA15" = "Pmch + Olig1",
+                         "GABA16" = "Cck + Vtn",
+                         "GABA17" = "Cst3 + C1qa",
+                         "GABA18" = "Slc5a7 + Acly",
+                         "GABA19" = "Calb2 + Synpr",
+                         "GABA20" = "Hdc + Slc18a2"
+                         )
 
 # Save RDS GABA.sub
 saveRDS(GABA.sub, "./RDS_obj/GABA_sub_named.RDS")
@@ -417,24 +506,88 @@ GABA.sub <- readRDS("./RDS_obj/GABA_sub_named.RDS")
 
 # DimPlot of GABA subtypes embedded in UMAP
 DimPlot(GABA.sub, reduction = 'umap', label = T) + labs(title = "UMAP of GABA Subtypes") + NoLegend()
+DimPlot(GABA.sub, reduction = 'umap', group.by = "subtypes" , label = T) + labs(title = "UMAP of GABA Subtype Numbers") + NoLegend()
+
+# DimPlot of GABA subtypes embedded in UMAP group by source
+DimPlot(GABA.sub, reduction = 'umap', group.by = "Source") + labs(title = "UMAP of GABA Subtypes")
+
+FeaturePlot(GABA.sub, features = c("Slc32a1", "Slc17a6"))
+FeaturePlot(GLUT.sub, features = c("Slc32a1", "Slc17a6"))
 
 # Visualize markers of GABA clusters with stack VlnPlot
 VlnPlot(GABA.sub , features = c(unique(GABA.sub.top2.markers$gene)),
         stack = T, group.by = "old.ident", split.by = "subtypes", flip = T) + 
   NoLegend() + labs(title = "Markers of GABA clusters")
 
-GLUTGABA.merge <- merge(GLUT.sub, y = GABA.sub,)
+# # UMAP plots of cell from different sources in GABA.se
+p1 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Unpub_LHA"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHA in GABA") + NoLegend()
+p2 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Unpub_LHb"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHb in GABA") + NoLegend()
+p3 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Unpub_HSV"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_HSV in GABA") + NoLegend()
+p4 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Unpub_LHA_LHb_patch"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Unpub_LHA_LHb_patch in GABA") + NoLegend()
+p5 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Chen"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Chen in GABA") + NoLegend()
+p6 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Mickelsen"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Mickelsen in GABA") + NoLegend()
+p7 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Rossi_2019"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Rossi_2019 in GABA") + NoLegend()
+p8 <- DimPlot(GABA.sub, cells.highlight = rownames(GABA.sub@meta.data)[GABA.sub$Source == "Rossi_2021"], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Rossi_2021 in GABA") + NoLegend()
+p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + (DimPlot(GABA.sub, reduction = "umap", group.by = "subtypes", label = T) + NoLegend())
+
+# Plots of GLUT fave markers
+FeaturePlot(neuron.subset, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7'))
+FeaturePlot(GLUT.sub, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7'))
+FeaturePlot(GABA.sub, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7'))
+VlnPlot(neuron.subset, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7'), stack = T, flip = T) + NoLegend()
+VlnPlot(GLUT.sub, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7'), split.by = "subtypes", stack = T, flip = T) + NoLegend()
+VlnPlot(GABA.sub, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7'), split.by = "subtypes", stack = T, flip = T) + NoLegend()
+
+# Plots of GABA fave markers
+FeaturePlot(neuron.subset, features = c('Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'))
+FeaturePlot(GLUT.sub, features = c('Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'))
+FeaturePlot(GABA.sub, features = c('Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'))
+VlnPlot(neuron.subset, features = c('Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'), stack = T, flip = T) + NoLegend()
+VlnPlot(GLUT.sub, features = c('Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'), split.by = "subtypes", stack = T, flip = T) + NoLegend()
+VlnPlot(GABA.sub, features = c('Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'), split.by = "subtypes", stack = T, flip = T) + NoLegend()
+
+# Plots of mk from Cell paper
+VlnPlot(neuron.subset, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                               'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                               'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                               'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
+        stack = T, fill.by = 'ident', flip = T) + labs(title = "Expression of Markers from Wang et al., in Neuron Subclass") + NoLegend()
+
+DotPlot(neuron.subset, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                                    'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                                    'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                                    'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
+        split.by = "Source", cols = "RdBu") + RotatedAxis() + labs(title = "DotPlot of Markers from Wang et al., in Neuron Subclass by Source")
+
+VlnPlot(GLUT.sub, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                               'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                               'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                               'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
+        stack = T, fill.by = 'ident', flip = T) + labs(title = "Expression of Markers from Wang et al., in GLUT Subtypes") + NoLegend()
+
+VlnPlot(GABA.sub, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                               'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                               'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                               'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
+        stack = T, fill.by = 'ident', flip = T) + labs(title = "Expression of Markers from Wang et al., in GABA Subtypes") + NoLegend()
+
+# Bar plot of cell count from source in each cluster
+dittoBarPlot(object = neuron.subset, var = "Source", scale = "count", group.by = "subtypes") + labs(title = "Bar Plot of Absolute Cell Count by Source in All Neuronal Cells")
+dittoBarPlot(object = neuron.subset, var = "Source", scale = "percent", group.by = "subtypes") + labs(title = "Bar Plot of Percent Count by Source in All Neuronal Cells")
+dittoBarPlot(object = GLUT.sub, var = "Source", scale = "count", group.by = "subtypes") + labs(title = "Bar Plot of Absolute Cell Count by Source in GLUT")
+dittoBarPlot(object = GLUT.sub, var = "Source", scale = "percent", group.by = "subtypes") + labs(title = "Bar Plot of Percent Count by Source in GLUT")
+dittoBarPlot(object = GABA.sub, var = "Source", scale = "count", group.by = "subtypes") + labs(title = "Bar Plot of Absolute Cell Count by Source in GABA")
+dittoBarPlot(object = GABA.sub, var = "Source", scale = "percent", group.by = "subtypes") + labs(title = "Bar Plot of Percent Count by Source in GABA")
+
+# DotPlot of neuron.subset with key markers and split by Source
+DotPlot(neuron.subset, features = c(unique(neuron.top2.markers$gene)), split.by = "Source", cols = "RdBu") + RotatedAxis()
+DotPlot(neuron.subset, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7', 'Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1')) + RotatedAxis()
+DotPlot(neuron.subset, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7', 'Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'), split.by = "Source", cols = "RdBu") + RotatedAxis()
 
 
 
 
-#FeaturePlot(neuron.subset, features = c("Slc32a1","Slc17a6"))
 
-#GLUT.features <-c('Pmch','Nrgn','Zic1','Tac1','Ebf3','Hcrt','Gpr101','Trh','Synpr','Grp','Col27a1','Syt2','Otp','Sst','Cartpt','Gda',
-                  #'Pitx2','Pdyn','Tcf4','Onecut2','Cbln2','Cck','Cbln1','Meis2','Nkx2-1')
-
-#VlnPlot(neuron.subset, features = c(unique(neuron.top2.markers$gene)), stack = T) + RotatedAxis()
-
-#DotPlot(neuron.subset, features = c(unique(neuron.top2.markers$gene))) + RotatedAxis()
-
+                        
+                        
 
