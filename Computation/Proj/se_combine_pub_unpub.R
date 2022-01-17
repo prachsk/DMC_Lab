@@ -5,6 +5,7 @@ library(scales)
 library(Seurat)
 library(SeuratObject)
 library(dittoSeq)
+library(Nebulosa)
 
 # Read RDS of pub and unpub data
 chen <- readRDS('/Users/pax/Google\ Drive/My\ Drive/Meletis/Computation/Chen_et_al/RDS_obj/Chen_merge.RDS')
@@ -389,6 +390,18 @@ DimPlot(GLUT.sub, reduction = 'umap', group.by = "subtypes" , label = T) + labs(
 # DimPlot of GLUT subtypes embedded in UMAP group by source
 DimPlot(GLUT.sub, reduction = 'umap', group.by = "Source") + labs(title = "UMAP of GLUT Subtypes")
 
+DimPlot(GLUT.sub, reduction = 'umap', group.by = "Ephys_Cathegory") + labs(title = "UMAP of Electro Physiological Property of GLUT Subtypes")
+dittoBarPlot(object = GLUT.sub, var = "Ephys_Cathegory", scale = "count", group.by = "subtypes")
+
+p1 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 1], cols.highlight = "red", cols = "gray") + labs(title = "Cells from Patch-seq with 1 EC") + NoLegend()
+p2 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 2], cols.highlight = "blue", cols = "gray") + labs(title = "Cells from Patch-seq with 2 EC") + NoLegend()
+p3 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 3], cols.highlight = "dark green", cols = "gray") + labs(title = "Cells from Patch-seq with 3 EC") + NoLegend()
+p4 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 4], cols.highlight = "yellow", cols = "gray") + labs(title = "Cells from Patch-seq with 4 EC") + NoLegend()
+p5 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 5], cols.highlight = "purple", cols = "gray") + labs(title = "Cells from Patch-seq with 5 EC") + NoLegend()
+p6 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 6], cols.highlight = "orange", cols = "gray") + labs(title = "Cells from Patch-seq with 6 EC") + NoLegend()
+p7 <- DimPlot(GLUT.sub, cells.highlight = rownames(GLUT.sub@meta.data)[GLUT.sub$Ephys_Cathegory == 7], cols.highlight = "black", cols = "gray") + labs(title = "Cells from Patch-seq with 7 EC") + NoLegend()
+p1 + p2 + p3 + p4 + p5 + p6 + p7 + (DimPlot(GLUT.sub, reduction = "umap", group.by = "subtypes", label = T) + NoLegend())
+
 # # Visualize markers of GLUT clusters with stack VlnPlot
 VlnPlot(GLUT.sub , features = c(unique(GLUT.sub.top2.markers$gene)), 
         stack = T, group.by = "old.ident", split.by = "subtypes", flip = T) + 
@@ -553,6 +566,11 @@ VlnPlot(neuron.subset, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch
                                'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
         stack = T, fill.by = 'ident', flip = T) + labs(title = "Expression of Markers from Wang et al., in Neuron Subclass") + NoLegend()
 
+FeaturePlot(neuron.subset, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                                   'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                                   'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                                   'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'))
+
 DotPlot(neuron.subset, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
                                     'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
                                     'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
@@ -565,11 +583,23 @@ VlnPlot(GLUT.sub, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch',
                                'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
         stack = T, fill.by = 'ident', flip = T) + labs(title = "Expression of Markers from Wang et al., in GLUT Subtypes") + NoLegend()
 
+FeaturePlot(GLUT.sub, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                               'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                               'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                               'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'))
+
+
 VlnPlot(GABA.sub, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
                                'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
                                'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
                                'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'),
         stack = T, fill.by = 'ident', flip = T) + labs(title = "Expression of Markers from Wang et al., in GABA Subtypes") + NoLegend()
+
+FeaturePlot(GABA.sub, features = c('Map1b', 'Slc17a6', 'Slc32a1', 'Gad1', 'Pmch', 
+                                   'Cartpt', 'Hcrt', 'Trh', 'Sst', 'Gpr83', 'Gpr101',
+                                   'Meis2', 'Otp', 'Calb1', 'Calb2', 'Nrgn', 'Tac1',
+                                   'Tac2', 'Bdnf', 'Synpr', 'Nts', 'Col25a1', 'Gal', 'Th'))
+
 
 # Bar plot of cell count from source in each cluster
 dittoBarPlot(object = neuron.subset, var = "Source", scale = "count", group.by = "subtypes") + labs(title = "Bar Plot of Absolute Cell Count by Source in All Neuronal Cells")
@@ -585,9 +615,26 @@ DotPlot(neuron.subset, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 
 DotPlot(neuron.subset, features = c('Trp73', 'Glp1r', 'Gpr101', 'Samd3', 'Nov', 'Ndnf', 'Chat', 'Slc5a7', 'Prlr', 'Esr1', 'Pex5l', 'Pvalb', 'Gpr149', 'Calcr', 'Npy', 'Kcnab1'), split.by = "Source", cols = "RdBu") + RotatedAxis()
 
 
+# Co-expression in GLUT
+plot_density(GLUT.sub, c('Slc5a7', 'Ndnf'), joint = T, combine = F)
+plot_density(GLUT.sub, c('Samd3', 'Nov'), joint = T, combine = F)
+plot_density(GLUT.sub, c('Gpr149', 'Trp73'), joint = T, combine = F)
+plot_density(GLUT.sub, c('Gpr149', 'Samd3'), joint = T, combine = F)
+plot_density(GLUT.sub, c('Gpr101', 'Pvalb'), joint = T, combine = F)
+FeaturePlot(GLUT.sub, c("Chrna1", "Chrnb2"))
+
+# Co-expression in GABA
+plot_density(GABA.sub, c('Slc5a7', 'Chat'), joint = T, combine = F)
+plot_density(GABA.sub, c('Gpr101', 'Calcr'), joint = T, combine = F)
+FeaturePlot(GABA.sub, c("Chrna1", "Chrnb2"))
+
+# FeaturePlot of the top 2 markers for each cluster
+FeaturePlot(GLUT.sub, features = c(unique(GLUT.sub.top2.markers$gene)))
+FeaturePlot(GABA.sub, features = c(unique(GABA.sub.top2.markers$gene)))
 
 
 
-                        
-                        
+
+
+
 
